@@ -40,37 +40,55 @@ def fake_neofetch(os_name: str, ram: int, cpu: int):
 
 def generate_tmate_session():
     """
-    Function to generate a tmate SSH session.
+    Creates a Docker container and sets up a tmate SSH session inside it.
     Returns the SSH connection string.
     """
-    print("Generating tmate session...")
-    
-    if not os.path.exists("/usr/bin/tmate"):
-        try:
-            subprocess.run(["apt", "update"], check=True)
-            subprocess.run(["apt", "install", "-y", "tmate"], check=True)
-        except subprocess.CalledProcessError:
-            return "❌ Failed to install tmate. Ensure the bot has sudo privileges."
+    print("Creating Docker container...")
+
+    container_name = "vps_container"
 
     try:
-        # Remove existing socket file if necessary
-        if os.path.exists("/tmp/tmate.sock"):
-            os.remove("/tmp/tmate.sock")
+        # Pull Ubuntu image if not available
+        subprocess.run(["docker", "pull", "ubuntu"], check=True)
 
-        # Start a new tmate session
-        subprocess.run(["tmate", "-S", "/tmp/tmate.sock", "new-session", "-d"], check=True)
-        subprocess.run(["tmate", "-S", "/tmp/tmate.sock", "wait", "tmate-ready"], check=True)
+        # Remove existing container if it exists
+        subprocess.run(["docker", "rm", "-f", container_name], check=False)
 
+        # Run a new Ubuntu container in detached mode with tmate installed
+        subprocess.run(
+            ["docker", "run", "-d", "--name", container_name, "--privileged", "ubuntu", "sleep", "infinity"],
+            check=True
+        )
+
+        # Install tmate inside the container
+        subprocess.run(
+            ["docker", "exec", container_name", "apt", "update"], check=True
+        )
+        subprocess.run(
+            ["docker", "exec", container_name, "apt", "install", "-y", "tmate"], check=True
+        )
+
+        # Start tmate session inside the container
+        subprocess.run(
+            ["docker", "exec", "-d", container_name, "tmate", "-S", "/tmp/tmate.sock", "new-session", "-d"],
+            check=True
+        )
+        subprocess.run(
+            ["docker", "exec", container_name, "tmate", "-S", "/tmp/tmate.sock", "wait", "tmate-ready"],
+            check=True
+        )
+
+        # Retrieve SSH connection
         result = subprocess.run(
-            ["tmate", "-S", "/tmp/tmate.sock", "display", "-p", "#{tmate_ssh}"],
+            ["docker", "exec", container_name, "tmate", "-S", "/tmp/tmate.sock", "display", "-p", "#{tmate_ssh}"],
             capture_output=True, text=True, check=True
         )
-        ssh_connection = result.stdout.strip()
 
+        ssh_connection = result.stdout.strip()
         return ssh_connection if ssh_connection else "❌ Failed to retrieve tmate SSH session."
 
     except subprocess.CalledProcessError as e:
-        return f"❌ tmate error: {e}"
+        return f"❌ Docker/tmate error: {e}"
 
 async def cleanup_vps(vps_id: int, timeout: int):
     """
