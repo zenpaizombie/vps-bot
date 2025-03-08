@@ -47,8 +47,8 @@ def generate_tmate_session():
     
     if not os.path.exists("/usr/bin/tmate"):
         try:
-            subprocess.run(["sudo", "apt", "update"], check=True)
-            subprocess.run(["sudo", "apt", "install", "-y", "tmate"], check=True)
+            subprocess.run(["apt", "update"], check=True)
+            subprocess.run(["apt", "install", "-y", "tmate"], check=True)
         except subprocess.CalledProcessError:
             return "❌ Failed to install tmate. Ensure the bot has sudo privileges."
 
