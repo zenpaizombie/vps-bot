@@ -61,12 +61,8 @@ def generate_tmate_session():
         )
 
         # Install tmate inside the container
-        subprocess.run(
-            ["docker", "exec", container_name", "apt", "update"], check=True
-        )
-        subprocess.run(
-            ["docker", "exec", container_name, "apt", "install", "-y", "tmate"], check=True
-        )
+        subprocess.run(["docker", "exec", container_name, "apt", "update"], check=True)
+        subprocess.run(["docker", "exec", container_name, "apt", "install", "-y", "tmate"], check=True)
 
         # Start tmate session inside the container
         subprocess.run(
